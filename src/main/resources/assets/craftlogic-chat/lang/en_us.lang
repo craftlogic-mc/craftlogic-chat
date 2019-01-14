@@ -1,0 +1,20 @@
+chat.muted=You cannot write to that channel because you're muted!
+chat.alone=It seems that nobody hears you...
+chat.permission=You don't have permission to send messages to that channel!
+chat.money=You are missing %s to send your message to that channel!
+chat.spy=[Spy] %s
+
+commands.chat.usage=/chat [clear|reload]
+commands.chat.disabled=Extended chat features are disabled!
+commands.chat.reload.success=Successfully reloaded chat config!
+commands.chat.reload.failed=Failed to reload chat config: %s. See console for more details
+commands.chat.clear=Successfully cleared all players' chats!
+
+commands.mute.usage=/mute <player> <duration> [reason...]
+commands.mute.already=Player %s is already muted!
+commands.mute.you.reason=You have benn muted for %s! Reason: %s
+commands.mute.you=You have benn muted for %s!
+commands.mute.target.reason=Player %s was muted for %d. Reason: %s
+commands.mute.target=Player %s was muted for %d.
+commands.unmute.already=Player %s is not muted!
+commands.unmute.success=Player %s has been successfully unmuted!

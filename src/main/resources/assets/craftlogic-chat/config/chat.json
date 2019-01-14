@@ -1,0 +1,14 @@
+{
+  "enabled": true,
+  "channels": {
+    "general": {
+      "symbol": "!",
+      "color": "gold",
+      "price": 1
+    },
+    "local": {
+      "range": 100,
+      "color": "gray"
+    }
+  }
+}

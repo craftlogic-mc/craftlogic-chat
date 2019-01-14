@@ -1,0 +1,20 @@
+chat.muted=Вы не можете отпралять сообщения в этот канал, так как на вас наложили онемение!
+chat.alone=Похоже, вас никто не слышит...
+chat.permission=У вас нет прав для отправки сообщений в этот канал!
+chat.money=Вам не хватает %s для отправки вашего сообщения в этот канал!
+chat.spy=[Прослушка] %s
+
+commands.chat.usage=/chat [clear|reload]
+commands.chat.disabled=Расширенные возможности чата отключены!
+commands.chat.reload.success=Конфигурация чата успешно перезагружена!
+commands.chat.reload.failed=Ошибка перезагрузки конфигурации чата: %s. Смотрите делали в консоли.
+commands.chat.clear=Чаты всех игроков успешно очищены!
+
+commands.mute.usage=/mute <игрок> <длительность> [причина...]
+commands.mute.already=Игрок %s уже и так немой!
+commands.mute.you.reason=На вас было наложено онемение на %s! Причина: %s
+commands.mute.you=На вас было наложено онемение на %s!
+commands.mute.target.reason=На игрока %s было наложено онемение на %d. Причина: %s
+commands.mute.target=На игрока %s было наложено онемение на %d.
+commands.unmute.already=Игрок %s не немой!
+commands.unmute.success=Игрок %s снова может говорить!
