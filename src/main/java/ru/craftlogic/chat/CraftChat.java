@@ -10,9 +10,8 @@ import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
 import ru.craftlogic.api.CraftAPI;
 import ru.craftlogic.api.network.AdvancedNetwork;
 import ru.craftlogic.chat.common.ProxyCommon;
-import ru.craftlogic.permissions.CraftPermissions;
 
-@Mod(modid = CraftChat.MOD_ID, version = CraftChat.VERSION, dependencies = "required-after:" + CraftAPI.MOD_ID + ";required-after:" + CraftPermissions.MOD_ID)
+@Mod(modid = CraftChat.MOD_ID, version = CraftChat.VERSION, dependencies = "required-after:" + CraftAPI.MOD_ID)
 public class CraftChat {
     public static final String MOD_ID = CraftAPI.MOD_ID + "-chat";
     public static final String VERSION = "0.2.0-BETA";

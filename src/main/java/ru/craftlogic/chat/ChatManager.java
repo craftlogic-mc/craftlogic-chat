@@ -14,9 +14,10 @@ import org.apache.commons.lang3.Validate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.craftlogic.api.economy.EconomyManager;
-import ru.craftlogic.api.inventory.ContainerBase;
+import ru.craftlogic.api.permission.PermissionManager;
 import ru.craftlogic.api.server.Server;
 import ru.craftlogic.api.text.Text;
+import ru.craftlogic.api.text.TextString;
 import ru.craftlogic.api.util.ConfigurableManager;
 import ru.craftlogic.api.world.CommandSender;
 import ru.craftlogic.api.world.Location;
@@ -24,18 +25,20 @@ import ru.craftlogic.api.world.OfflinePlayer;
 import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.MuteManager.Mute;
 import ru.craftlogic.common.command.CommandManager;
-import ru.craftlogic.permissions.PermissionManager;
-import ru.craftlogic.permissions.UserManager.User;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Function;
 import java.util.function.Predicate;
+
+import static java.util.Collections.singleton;
 
 public class ChatManager extends ConfigurableManager {
     private static final Logger LOGGER = LogManager.getLogger("ChatManager");
 
     private final Map<String, Channel> channels = new HashMap<>();
+    private final Map<String, Function<Player, Text<?, ?>>> argSuppliers = new HashMap<>();
     private final MuteManager muteManager;
     private boolean enabled;
 
@@ -46,6 +49,10 @@ public class ChatManager extends ConfigurableManager {
 
     public boolean isEnabled() {
         return enabled;
+    }
+
+    public void addArgSupplier(String arg, Function<Player, Text<?, ?>> supplier) {
+        this.argSuppliers.put(arg, supplier);
     }
 
     @Override
@@ -116,7 +123,6 @@ public class ChatManager extends ConfigurableManager {
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onChatMessage(ServerChatEvent event) {
-        ContainerBase
         if (!this.enabled) {
             return;
         }
@@ -137,15 +143,18 @@ public class ChatManager extends ConfigurableManager {
         }
 
         Location senderLocation = player.getLocation();
-        PermissionManager permissionManager = (PermissionManager) this.server.getPermissionManager();
+        PermissionManager permissionManager = this.server.getPermissionManager();
         EconomyManager economyManager = this.server.getEconomyManager();
-        User user = permissionManager.getUser(profile.getId());
+        String color = permissionManager.getPermissionMetadata(profile, "color");
+        String prefix = permissionManager.getPermissionMetadata(profile, "prefix");
+        String suffix = permissionManager.getPermissionMetadata(profile, "suffix");
+        String tooltip = permissionManager.getPermissionMetadata(profile, "tooltip");
         Channel channel = this.findMatchingChannel(message);
 
         if (channel != null) {
-            if (channel.permission == null || user.hasPermissions(channel.permission.send)) {
+            if (channel.permission == null || permissionManager.hasPermissions(profile, singleton(channel.permission.send))) {
                 if (channel.price != null && economyManager.isEnabled()) {
-                    float price = channel.price.calculate(message.substring(channel.prefix.length()));
+                    float price = channel.price.calculate(message.substring(channel.symbol.length()));
                     float balance = economyManager.getBalance(player);
                     if (balance >= price) {
                         economyManager.setBalance(player, balance - price);
@@ -173,7 +182,24 @@ public class ChatManager extends ConfigurableManager {
                     }
                 }
 
-                Text<?, ?> msg = channel.format(user, username, message);
+                Map<String, Text<?, ?>> args = new HashMap<>();
+                TextString u = Text.string(username).suggestCommand("/w " + username);
+                if (tooltip != null && !tooltip.isEmpty()) {
+                    u.hoverText(suffix.replace('&', '\u00a7'));
+                }
+                if (color != null && !color.isEmpty()) {
+                    u.color(this.findColor(color));
+                }
+                args.put("username", u);
+                args.put("message", Text.string(message.substring(channel.symbol.length())).color(channel.color));
+                args.put("prefix", prefix != null && !prefix.isEmpty() ? Text.string(prefix) : Text.string());
+                args.put("suffix", suffix != null && !suffix.isEmpty() ? Text.string(prefix) : Text.string());
+
+                for (Map.Entry<String, Function<Player, Text<?, ?>>> entry : this.argSuppliers.entrySet()) {
+                    args.put(entry.getKey(), entry.getValue().apply(player));
+                }
+
+                Text<?, ?> msg = channel.format(args).italic();
 
                 this.server.sendMessage(msg);
 
@@ -194,10 +220,19 @@ public class ChatManager extends ConfigurableManager {
         }
     }
 
+    private TextFormatting findColor(String color) {
+        for (TextFormatting fmt : TextFormatting.values()) {
+            if (fmt.toString().equals(color.replace('&', '\u00a7'))) {
+                return fmt;
+            }
+        }
+        return TextFormatting.RESET;
+    }
+
     private static class Channel implements Predicate<String> {
         private final String id;
         private final String symbol;
-        private final String prefix;
+        private final String format;
         private final TextFormatting color;
         private final Price price;
         private final Permission permission;
@@ -208,7 +243,7 @@ public class ChatManager extends ConfigurableManager {
             this.symbol = JsonUtils.getString(data, "symbol", "");
             Validate.isTrue(this.symbol.length() <= 1, "Channel symbol must be single character!");
             this.color = data.has("color") ? TextFormatting.getValueByName(JsonUtils.getString(data, "color")) : TextFormatting.RESET;
-            this.prefix = JsonUtils.getString(data, "prefix", "");
+            this.format = JsonUtils.getString(data, "format", "{prefix}{username}{suffix}: {message}");
             this.price = data.has("price") ? new Price(data.get("price")) : null;
             this.permission = data.has("permission") ? new Permission(data.get("permission")) : null;
             this.range = JsonUtils.getInt(data, "range", 0);
@@ -224,28 +259,35 @@ public class ChatManager extends ConfigurableManager {
             return this.symbol.isEmpty() || message.startsWith(this.symbol);
         }
 
-        public Text<?, ?> format(User user, String username, String message) {
-            String prefix = user.prefix().replace('&', '\u00a7');
-            String suffix = user.suffix().replace('&', '\u00a7');
+        public Text<?, ?> format(Map<String, Text<?, ?>> args) {
             Text<?, ?> msg = Text.string();
-            if (!this.prefix.isEmpty()) {
-                msg.appendText(this.prefix);
+            String format = this.format;
+            int sdx;
+            while ((sdx = format.indexOf('{')) >= 0) {
+                if (sdx > 0) {
+                    msg.appendText(format.substring(0, sdx));
+                }
+                format = format.substring(sdx + 1);
+                int edx = format.indexOf('}');
+                if (edx >= 0) {
+                    String var = format.substring(0, edx);
+                    format = format.substring(edx + 1);
+                    Text<?, ?> arg = args.get(var);
+                    if (arg != null) {
+                        msg.append(arg);
+                        if (format.length() > 0 && !format.contains("{")) {
+                            msg.appendText(format);
+                        }
+                    } else {
+                        throw new IllegalArgumentException("Unknown argument in channel '" + this.id + "': " + var);
+                    }
+                } else if (sdx > 0) {
+                    throw new IllegalArgumentException("Unclosed curly bracket in channel '" + this.id + "' format at " + sdx);
+                } else {
+                    msg.appendText(format);
+                }
             }
-            if (!prefix.isEmpty()) {
-                msg.appendText(prefix);
-                msg.appendText(" ");
-            }
-            Text<?, ?> name = Text.string(username);
-            if (!suffix.isEmpty()) {
-                name.hoverText(suffix);
-            }
-            if (!this.symbol.isEmpty()) {
-                message = message.substring(this.symbol.length());
-            }
-            return msg.append(name)
-                      .appendText(": ")
-                      .appendText(message, m -> m.color(this.color))
-                      .italic();
+            return msg;
         }
 
         public JsonObject toJson() {
@@ -254,8 +296,8 @@ public class ChatManager extends ConfigurableManager {
             if (this.color != TextFormatting.RESET) {
                 obj.addProperty("color", this.color.name().toLowerCase());
             }
-            if (!this.prefix.isEmpty()) {
-                obj.addProperty("prefix", this.prefix);
+            if (!this.format.isEmpty()) {
+                obj.addProperty("format", this.format);
             }
             if (this.price != null) {
                 obj.add("price", this.price.toJson());

@@ -14,7 +14,6 @@ import ru.craftlogic.chat.network.message.MessageClearChat;
 
 import java.io.IOException;
 
-import static ru.craftlogic.common.command.ManagementCommands.parseDuration;
 
 public class ChatCommands implements CommandRegistrar {
     @Command(name = "mute", syntax = {
@@ -28,7 +27,7 @@ public class ChatCommands implements CommandRegistrar {
         }
 
         Player target = ctx.get("target").asPlayer();
-        long duration = parseDuration(ctx.get("duration").asString());
+        long duration = CommandContext.parseDuration(ctx.get("duration").asString());
         String reason = ctx.getIfPresent("reason", Argument::asString).orElse(null);
 
         if (chatManager.getMute(target) != null) {
@@ -93,9 +92,9 @@ public class ChatCommands implements CommandRegistrar {
             throw new CommandException("commands.chat.disabled");
         }
 
-        switch (ctx.constant()) {
+        switch (ctx.action(0)) {
             case "clear": {
-                ctx.server().broadcastPacket(new MessageClearChat(ctx.hasConstant(1)));
+                ctx.server().broadcastPacket(new MessageClearChat(ctx.hasAction(1)));
                 ctx.sendNotification(
                     Text.translation("commands.chat.clear").gray()
                 );
