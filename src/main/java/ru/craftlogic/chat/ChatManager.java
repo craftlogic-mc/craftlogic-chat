@@ -24,6 +24,10 @@ import ru.craftlogic.api.world.Location;
 import ru.craftlogic.api.world.OfflinePlayer;
 import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.MuteManager.Mute;
+import ru.craftlogic.chat.common.commands.CommandChat;
+import ru.craftlogic.chat.common.commands.CommandMessage;
+import ru.craftlogic.chat.common.commands.CommandMute;
+import ru.craftlogic.chat.common.commands.CommandUnmute;
 import ru.craftlogic.common.command.CommandManager;
 
 import java.io.IOException;
@@ -93,7 +97,12 @@ public class ChatManager extends ConfigurableManager {
 
     @Override
     public void registerCommands(CommandManager commandManager) {
-        commandManager.registerCommandContainer(ChatCommands.class);
+        commandManager.registerCommand(new CommandMessage());
+        if (server.isDedicated()) {
+            commandManager.registerCommand(new CommandMute());
+            commandManager.registerCommand(new CommandUnmute());
+            commandManager.registerCommand(new CommandChat());
+        }
     }
 
     public boolean removeMute(OfflinePlayer player) {
