@@ -208,7 +208,7 @@ public class ChatManager extends ConfigurableManager {
                     args.put(entry.getKey(), entry.getValue().apply(player));
                 }
 
-                Text<?, ?> msg = channel.format(args).italic();
+                Text<?, ?> msg = channel.format(args);
 
                 this.server.sendMessage(msg);
 
