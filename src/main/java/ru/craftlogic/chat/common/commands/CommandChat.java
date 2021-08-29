@@ -1,16 +1,13 @@
 package ru.craftlogic.chat.common.commands;
 
 import net.minecraft.command.CommandException;
-import ru.craftlogic.api.CraftMessages;
 import ru.craftlogic.api.command.CommandBase;
 import ru.craftlogic.api.command.CommandContext;
 import ru.craftlogic.api.text.Text;
-import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.ChatManager;
 import ru.craftlogic.chat.network.message.MessageClearChat;
 
 import java.io.IOException;
-import java.util.List;
 
 public class CommandChat extends CommandBase {
     public CommandChat() {
@@ -30,10 +27,17 @@ public class CommandChat extends CommandBase {
 
         switch (ctx.action(0)) {
             case "clear": {
-                ctx.server().broadcastPacket(new MessageClearChat(ctx.hasAction(1)));
-                ctx.sendNotification(
-                    Text.translation("commands.chat.clear").gray()
-                );
+                if (ctx.hasAction(1) && ctx.action(1).equals("all")) {
+                    ctx.server().broadcastPacket(new MessageClearChat(ctx.hasAction(1)));
+                    ctx.sendNotification(
+                        Text.translation("commands.chat.clear_all").gray()
+                    );
+                } else {
+                    ctx.senderAsPlayer().sendPacket(new MessageClearChat(ctx.hasAction(1)));
+                    ctx.sendNotification(
+                        Text.translation("commands.chat.clear").gray()
+                    );
+                }
                 break;
             }
             case "reload": {

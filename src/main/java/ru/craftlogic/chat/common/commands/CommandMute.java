@@ -8,8 +8,6 @@ import ru.craftlogic.api.text.Text;
 import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.ChatManager;
 
-import java.util.List;
-
 public class CommandMute extends CommandBase {
     public CommandMute() {
         super("mute", 3,
@@ -29,10 +27,9 @@ public class CommandMute extends CommandBase {
         long duration = CommandContext.parseDuration(ctx.get("duration").asString());
         String reason = ctx.getIfPresent("reason", CommandContext.Argument::asString).orElse(null);
 
-        if (chatManager.getMute(target) != null) {
+        if (!chatManager.addMute(target, System.currentTimeMillis() + duration, reason)) {
             throw new CommandException("commands.mute.already", target.getName());
         }
-        chatManager.addMute(target, System.currentTimeMillis() + duration, reason);
 
         Text<?, ?> d = CraftMessages.parseDuration(duration).darkRed();
 

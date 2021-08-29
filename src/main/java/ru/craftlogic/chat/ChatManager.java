@@ -14,6 +14,7 @@ import org.apache.commons.lang3.Validate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.craftlogic.api.economy.EconomyManager;
+import ru.craftlogic.api.event.player.PlayerTeleportRequestEvent;
 import ru.craftlogic.api.permission.PermissionManager;
 import ru.craftlogic.api.server.Server;
 import ru.craftlogic.api.text.Text;
@@ -24,10 +25,7 @@ import ru.craftlogic.api.world.Location;
 import ru.craftlogic.api.world.OfflinePlayer;
 import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.MuteManager.Mute;
-import ru.craftlogic.chat.common.commands.CommandChat;
-import ru.craftlogic.chat.common.commands.CommandMessage;
-import ru.craftlogic.chat.common.commands.CommandMute;
-import ru.craftlogic.chat.common.commands.CommandUnmute;
+import ru.craftlogic.chat.common.commands.*;
 import ru.craftlogic.common.command.CommandManager;
 
 import java.io.IOException;
@@ -44,11 +42,13 @@ public class ChatManager extends ConfigurableManager {
     private final Map<String, Channel> channels = new HashMap<>();
     private final Map<String, Function<Player, Text<?, ?>>> argSuppliers = new HashMap<>();
     private final MuteManager muteManager;
+    private final IgnoreManager ignoreManager;
     private boolean enabled;
 
     public ChatManager(Server server, Path settingsDirectory) {
         super(server, settingsDirectory.resolve("chat.json"), LOGGER);
         this.muteManager = new MuteManager(this, settingsDirectory.resolve("chat/mutes.json"), LOGGER);
+        this.ignoreManager = new IgnoreManager(this, settingsDirectory.resolve("chat/ignores.json"), LOGGER);
     }
 
     public boolean isEnabled() {
@@ -75,6 +75,7 @@ public class ChatManager extends ConfigurableManager {
         }
         try {
             this.muteManager.load();
+            this.ignoreManager.load();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -90,6 +91,7 @@ public class ChatManager extends ConfigurableManager {
         config.add("channels", channels);
         try {
             this.muteManager.save(true);
+            this.ignoreManager.save(true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -102,23 +104,37 @@ public class ChatManager extends ConfigurableManager {
             commandManager.registerCommand(new CommandMute());
             commandManager.registerCommand(new CommandUnmute());
             commandManager.registerCommand(new CommandChat());
+            commandManager.registerCommand(new CommandIgnore());
+            commandManager.registerCommand(new CommandUnignore());
         }
     }
 
+    public boolean removeIgnore(OfflinePlayer player, OfflinePlayer target) {
+        return ignoreManager.removeIgnore(player.getId(), target.getId());
+    }
+
+    public boolean addIgnore(OfflinePlayer player, OfflinePlayer target) {
+        return ignoreManager.addIgnore(player.getId(), target.getId());
+    }
+
+    public boolean isIgnored(OfflinePlayer player, OfflinePlayer target) {
+        return ignoreManager.isIgnored(player.getId(), target.getId());
+    }
+
     public boolean removeMute(OfflinePlayer player) {
-        return this.muteManager.removeMute(player.getId());
+        return muteManager.removeMute(player.getId());
     }
 
     public boolean addMute(OfflinePlayer player, long expiration, String reason) {
-        return this.muteManager.addMute(player.getId(), expiration, reason);
+        return muteManager.addMute(player.getId(), expiration, reason);
     }
 
     public Mute getMute(OfflinePlayer player) {
-        return this.getMute(player.getId());
+        return getMute(player.getId());
     }
 
     public Mute getMute(UUID id) {
-        return this.muteManager.getMute(id);
+        return muteManager.getMute(id);
     }
 
     private Channel findMatchingChannel(String message) {
@@ -131,8 +147,19 @@ public class ChatManager extends ConfigurableManager {
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)
+    public void onTeleportRequest(PlayerTeleportRequestEvent event) {
+        if (!enabled) {
+            return;
+        }
+        if (isIgnored(event.target, event.player)) {
+            event.setCanceled(true);
+            event.player.sendMessage(Text.translation("chat.teleport.ignored").red());
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.HIGHEST)
     public void onChatMessage(ServerChatEvent event) {
-        if (!this.enabled) {
+        if (!enabled) {
             return;
         }
         event.setCanceled(true);
@@ -208,7 +235,10 @@ public class ChatManager extends ConfigurableManager {
                     args.put(entry.getKey(), entry.getValue().apply(player));
                 }
 
+                Map<String, Text<?, ?>> ignoreArgs = new HashMap<>(args);
+                ignoreArgs.put("message", Text.translation("chat.ignored").italic().color(channel.color));
                 Text<?, ?> msg = channel.format(args);
+                Text<?, ?> ignoreMsg = channel.format(ignoreArgs);
 
                 this.server.sendMessage(msg);
 
@@ -217,7 +247,11 @@ public class ChatManager extends ConfigurableManager {
                 } else {
                     player.sendMessage(msg);
                     for (CommandSender receiver : receivers) {
-                        receiver.sendMessage(msg);
+                        if (receiver instanceof Player && ignoreManager.isIgnored(((Player) receiver).getId(), player.getId())) {
+                            receiver.sendMessage(ignoreMsg);
+                        } else {
+                            receiver.sendMessage(msg);
+                        }
                     }
                 }
                 for (CommandSender receiver : spyReceivers) {
