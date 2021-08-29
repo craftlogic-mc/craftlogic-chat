@@ -1,15 +1,19 @@
 package ru.craftlogic.chat;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
 import com.mojang.authlib.GameProfile;
+import com.mojang.authlib.properties.Property;
+import com.mojang.authlib.properties.PropertyMap;
 import net.minecraft.util.JsonUtils;
 import net.minecraft.util.text.TextFormatting;
 import net.minecraft.world.GameType;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
+import net.minecraftforge.fml.common.gameevent.PlayerEvent;
 import org.apache.commons.lang3.Validate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -144,6 +148,58 @@ public class ChatManager extends ConfigurableManager {
             }
         }
         return null;
+    }
+
+    @SubscribeEvent
+    public void onPlayerJoined(PlayerEvent.PlayerLoggedInEvent event) {
+        GameProfile profile = event.player.getGameProfile();
+        PropertyMap properties = profile.getProperties();
+        Collection<Property> twinks = properties.get("twinks");
+        if (twinks != null && !twinks.isEmpty()) {
+            Text<?, ?> lines = Text.string();
+            Property p = twinks.iterator().next();
+            String v = p.getValue();
+            if (!v.isEmpty()) {
+                String raw = new String(Base64.getDecoder().decode(v));
+                JsonArray array = GSON.fromJson(raw, JsonArray.class);
+                int i = 0;
+                for (JsonElement e : array) {
+                    JsonObject t = e.getAsJsonObject();
+                    String username = t.get("username").getAsString();
+                    UUID uuid = UUID.fromString(t.get("uuid").getAsString());
+                    UUID machineId = UUID.fromString(t.get("machineId").getAsString());
+                    UUID userId = UUID.fromString(t.get("userId").getAsString());
+                    int offences = t.get("offences").getAsInt();
+                    long bannedUntil = t.get("banned").getAsJsonObject().get("secs_since_epoch").getAsLong();
+                    boolean banned = System.currentTimeMillis() / 1000L < bannedUntil;
+                    if (!uuid.equals(profile.getId())) {
+                        if (i > 0) {
+                            lines.append(Text.string(", ").yellow());
+                        }
+                        if (offences > 0) {
+                            lines.append(Text.string(username).color(banned ? TextFormatting.RED : TextFormatting.GOLD)
+                                .appendText(" (").yellow()
+                                .appendText(String.valueOf(offences)).red()
+                                .appendText(")").yellow()
+                            );
+                        } else {
+                            lines.append(Text.string(username).gold());
+                        }
+                        i++;
+                    }
+                }
+                if (i > 0) {
+                    Text<?, ?> warning = Text.translation("chat.twinks").yellow()
+                        .arg(profile.getName());
+                    for (Player player : server.getPlayerManager().getAllOnline()) {
+                        if (player.hasPermission("chat.admin.twinks")) {
+                            player.sendMessage(warning);
+                            player.sendMessage(lines);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     @SubscribeEvent(priority = EventPriority.HIGHEST)

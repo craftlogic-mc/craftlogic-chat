@@ -6,6 +6,7 @@ chat.teleport.ignored=You cannot teleport to that player!
 chat.permission=You don't have permission to send messages to that channel!
 chat.money=You are missing %s to send your message to that channel!
 chat.spy=[Spy] %s
+chat.twinks=Player %s logged in from account with several twinks:
 
 commands.chat.usage=/chat [clear|reload]
 commands.chat.disabled=Extended chat features are disabled!
