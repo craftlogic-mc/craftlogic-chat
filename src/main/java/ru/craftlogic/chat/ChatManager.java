@@ -110,6 +110,7 @@ public class ChatManager extends ConfigurableManager {
             commandManager.registerCommand(new CommandChat());
             commandManager.registerCommand(new CommandIgnore());
             commandManager.registerCommand(new CommandUnignore());
+            commandManager.registerCommand(new CommandTwinks());
         }
     }
 
@@ -150,9 +151,7 @@ public class ChatManager extends ConfigurableManager {
         return null;
     }
 
-    @SubscribeEvent
-    public void onPlayerJoined(PlayerEvent.PlayerLoggedInEvent event) {
-        GameProfile profile = event.player.getGameProfile();
+    public Text<?, ?> getTwinksInfo(GameProfile profile) {
         PropertyMap properties = profile.getProperties();
         Collection<Property> twinks = properties.get("twinks");
         if (twinks != null && !twinks.isEmpty()) {
@@ -189,14 +188,24 @@ public class ChatManager extends ConfigurableManager {
                     }
                 }
                 if (i > 0) {
-                    Text<?, ?> warning = Text.translation("chat.twinks").yellow()
-                        .arg(profile.getName());
-                    for (Player player : server.getPlayerManager().getAllOnline()) {
-                        if (player.hasPermission("chat.admin.twinks")) {
-                            player.sendMessage(warning);
-                            player.sendMessage(lines);
-                        }
-                    }
+                    return lines;
+                }
+            }
+        }
+        return null;
+    }
+
+    @SubscribeEvent
+    public void onPlayerJoined(PlayerEvent.PlayerLoggedInEvent event) {
+        GameProfile profile = event.player.getGameProfile();
+        Text<?, ?> lines = getTwinksInfo(profile);
+        if (lines != null) {
+            Text<?, ?> warning = Text.translation("chat.twinks").yellow()
+                .arg(profile.getName(), Text::gold);
+            for (Player player : server.getPlayerManager().getAllOnline()) {
+                if (player.hasPermission("chat.admin.twinks")) {
+                    player.sendMessage(warning);
+                    player.sendMessage(lines);
                 }
             }
         }
