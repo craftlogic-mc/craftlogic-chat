@@ -48,6 +48,7 @@ public class ChatManager extends ConfigurableManager {
     private final MuteManager muteManager;
     private final IgnoreManager ignoreManager;
     private boolean enabled;
+    private boolean alone;
 
     public ChatManager(Server server, Path settingsDirectory) {
         super(server, settingsDirectory.resolve("chat.json"), LOGGER);
@@ -70,7 +71,8 @@ public class ChatManager extends ConfigurableManager {
 
     @Override
     protected void load(JsonObject config) {
-        this.enabled = JsonUtils.getBoolean(config, "enabled", false);
+        enabled = JsonUtils.getBoolean(config, "enabled", false);
+        alone = JsonUtils.getBoolean(config, "alone", true);
         JsonObject channels = JsonUtils.getJsonObject(config, "channels", new JsonObject());
         for (Map.Entry<String, JsonElement> entry : channels.entrySet()) {
             String id = entry.getKey();
@@ -78,8 +80,8 @@ public class ChatManager extends ConfigurableManager {
             this.channels.put(id, new Channel(id, value));
         }
         try {
-            this.muteManager.load();
-            this.ignoreManager.load();
+            muteManager.load();
+            ignoreManager.load();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -87,15 +89,16 @@ public class ChatManager extends ConfigurableManager {
 
     @Override
     protected void save(JsonObject config) {
-        config.addProperty("enabled", this.enabled);
+        config.addProperty("enabled", enabled);
+        config.addProperty("alone", alone);
         JsonObject channels = new JsonObject();
         for (Map.Entry<String, Channel> entry : this.channels.entrySet()) {
             channels.add(entry.getKey(), entry.getValue().toJson());
         }
         config.add("channels", channels);
         try {
-            this.muteManager.save(true);
-            this.ignoreManager.save(true);
+            muteManager.save(true);
+            ignoreManager.save(true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -307,7 +310,7 @@ public class ChatManager extends ConfigurableManager {
 
                 this.server.sendMessage(msg);
 
-                if (receivers.isEmpty()) {
+                if (receivers.isEmpty() && alone) {
                     player.sendMessage(Text.translation("chat.alone").yellow());
                 } else {
                     player.sendMessage(msg);
