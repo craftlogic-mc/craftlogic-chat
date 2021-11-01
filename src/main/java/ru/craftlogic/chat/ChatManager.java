@@ -289,8 +289,7 @@ public class ChatManager extends ConfigurableManager {
                 Map<String, Text<?, ?>> args = new HashMap<>();
                 TextString u = Text.string(username).suggestCommand("/w " + username);
                 if (tooltip != null && !tooltip.isEmpty()) {
-                    String translated = suffix.replace('&', '\u00a7');
-                    u.hoverText(translated);
+                    u.hoverText(tooltip.replace('&', '\u00a7'));
                 }
                 if (color != null && !color.isEmpty()) {
                     u.color(findColor(color));
@@ -333,9 +332,9 @@ public class ChatManager extends ConfigurableManager {
     }
 
     private TextFormatting findColor(String color) {
-        String translated = color.replace('&', '\u00a7');
+        String formatted = color.replace('&', '\u00a7');
         for (TextFormatting fmt : TextFormatting.values()) {
-            if (fmt.toString().equals(translated)) {
+            if (fmt.toString().equals(formatted)) {
                 return fmt;
             }
         }
