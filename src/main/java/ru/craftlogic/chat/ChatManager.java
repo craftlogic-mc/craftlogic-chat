@@ -289,15 +289,16 @@ public class ChatManager extends ConfigurableManager {
                 Map<String, Text<?, ?>> args = new HashMap<>();
                 TextString u = Text.string(username).suggestCommand("/w " + username);
                 if (tooltip != null && !tooltip.isEmpty()) {
-                    u.hoverText(suffix.replace('&', '\u00a7'));
+                    String translated = suffix.replace('&', '\u00a7');
+                    u.hoverText(translated);
                 }
                 if (color != null && !color.isEmpty()) {
-                    u.color(this.findColor(color));
+                    u.color(findColor(color));
                 }
                 args.put("username", u);
                 args.put("message", Text.string(message.substring(channel.symbol.length())).color(channel.color));
-                args.put("prefix", prefix != null && !prefix.isEmpty() ? Text.string(prefix) : Text.string());
-                args.put("suffix", suffix != null && !suffix.isEmpty() ? Text.string(prefix) : Text.string());
+                args.put("prefix", prefix != null && !prefix.isEmpty() ? Text.string(prefix.replace('&', '\u00a7')) : Text.string());
+                args.put("suffix", suffix != null && !suffix.isEmpty() ? Text.string(suffix.replace('&', '\u00a7')) : Text.string());
 
                 for (Map.Entry<String, Function<Player, Text<?, ?>>> entry : this.argSuppliers.entrySet()) {
                     args.put(entry.getKey(), entry.getValue().apply(player));
@@ -332,8 +333,9 @@ public class ChatManager extends ConfigurableManager {
     }
 
     private TextFormatting findColor(String color) {
+        String translated = color.replace('&', '\u00a7');
         for (TextFormatting fmt : TextFormatting.values()) {
-            if (fmt.toString().equals(color.replace('&', '\u00a7'))) {
+            if (fmt.toString().equals(translated)) {
                 return fmt;
             }
         }
