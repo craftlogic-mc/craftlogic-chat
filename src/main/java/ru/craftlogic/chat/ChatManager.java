@@ -88,6 +88,13 @@ public class ChatManager extends ConfigurableManager {
     }
 
     @Override
+    public void unload() throws Exception {
+        if (enabled) {
+            super.unload();
+        }
+    }
+
+    @Override
     protected void save(JsonObject config) {
         config.addProperty("enabled", enabled);
         config.addProperty("alone", alone);
