@@ -8,6 +8,8 @@ chat.money=Вам не хватает %s для отправки вашего с
 chat.spy=[Прослушка] %s
 chat.twinks=Игрок %s вошел с аккаунта с несколькими твинками:
 chat.no_twinks=Игрок %s вошел с аккаунта без твинков
+chat.reply_message.offline=Игрок не в сети
+chat.reply_message=Вам никто не писал..
 
 commands.chat.usage=/chat [clear|reload]
 commands.chat.disabled=Расширенные возможности чата отключены!
