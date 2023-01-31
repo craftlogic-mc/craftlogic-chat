@@ -45,6 +45,12 @@ runClient {
 }
 
 repositories {
+
+    maven {
+        name = 'spongepowered'
+        url = 'https://repo.spongepowered.org/maven/'
+    }
+
     mavenCentral()
 }
 
@@ -69,6 +75,14 @@ dependencies {
     // for more info...
     // http://www.gradle.org/docs/current/userguide/artifact_dependencies_tutorial.html
     // http://www.gradle.org/docs/current/userguide/dependency_management.html
+
+    // https://mvnrepository.com/artifact/org.spongepowered/mixin
+    compile(group: 'org.spongepowered', name: 'mixin', version: project.mixin_version) {
+        exclude module: 'launchwrapper'
+        exclude module: 'guava'
+        exclude module: 'gson'
+        exclude module: 'commons-io'
+    }
 }
 
 processResources {
