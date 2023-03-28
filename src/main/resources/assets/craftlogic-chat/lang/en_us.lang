@@ -8,6 +8,8 @@ chat.money=You are missing %s to send your message to that channel!
 chat.spy=[Spy] %s
 chat.twinks=Player %s logged in from account with several twinks:
 chat.no_twinks=Player %s logged in from account without any twinks
+chat.reply_message=No one wrote to you..
+chat.reply_message.offline=The player is not online
 
 commands.chat.usage=/chat [clear|reload]
 commands.chat.disabled=Extended chat features are disabled!

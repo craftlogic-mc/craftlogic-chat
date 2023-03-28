@@ -9,7 +9,6 @@ import com.mojang.authlib.properties.Property;
 import com.mojang.authlib.properties.PropertyMap;
 import net.minecraft.util.JsonUtils;
 import net.minecraft.util.text.TextFormatting;
-import net.minecraft.world.GameType;
 import net.minecraftforge.event.ServerChatEvent;
 import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
@@ -45,6 +44,7 @@ public class ChatManager extends ConfigurableManager {
     private static final Logger LOGGER = LogManager.getLogger("ChatManager");
 
     private final Map<String, Channel> channels = new HashMap<>();
+    private final Map<UUID, UUID> playerLastMessage = new HashMap<>();
     private final Map<String, Function<Player, Text<?, ?>>> argSuppliers = new HashMap<>();
     private final MuteManager muteManager;
     private final IgnoreManager ignoreManager;
@@ -117,6 +117,7 @@ public class ChatManager extends ConfigurableManager {
         commandManager.registerCommand(new CommandMessage());
         if (server.isDedicated()) {
             commandManager.registerCommand(new CommandMute());
+            commandManager.registerCommand(new CommandReplyMessage());
             commandManager.registerCommand(new CommandUnmute());
             commandManager.registerCommand(new CommandChat());
             commandManager.registerCommand(new CommandIgnore());
@@ -151,6 +152,15 @@ public class ChatManager extends ConfigurableManager {
 
     public Mute getMute(UUID id) {
         return muteManager.getMute(id);
+    }
+
+
+    public UUID getLastSender(UUID id) {
+        return playerLastMessage.get(id);
+    }
+
+    public void setLastSender(UUID player, UUID lastPlayer) {
+        playerLastMessage.put(player, lastPlayer);
     }
 
     private Channel findMatchingChannel(String message) {
@@ -272,7 +282,7 @@ public class ChatManager extends ConfigurableManager {
         Channel channel = this.findMatchingChannel(message);
 
         if (channel != null) {
-            if (channel.permission == null || permissionManager.hasPermissions(profile, singleton(channel.permission.send))) {
+            if (channel.permission == null || channel.permission.send == null || permissionManager.hasPermission(profile, channel.permission.send)) {
                 if (channel.price != null && economyManager.isEnabled()) {
                     float price = channel.price.calculate(message.substring(channel.symbol.length()));
                     float balance = economyManager.getBalance(player);
@@ -287,16 +297,11 @@ public class ChatManager extends ConfigurableManager {
                 List<CommandSender> receivers = new ArrayList<>();
                 List<CommandSender> spyReceivers = new ArrayList<>();
                 for (Player p : this.server.getPlayerManager().getAllOnline()) {
-                    if (!p.getId().equals(player.getId()) && (channel.permission == null || p.hasPermission(channel.permission.receive))) {
+                    if (!p.getId().equals(player.getId()) && (channel.permission == null || channel.permission.receive == null || p.hasPermission(channel.permission.receive))) {
                         if (channel.range == 0 || p.getLocation().distance(senderLocation) <= channel.range) {
-                            if (p.getGameMode() != GameType.SPECTATOR) {
-                                receivers.add(p);
-                            } else {
-                                spyReceivers.add(p);
-                            }
+                            receivers.add(p);
                         } else if (channel.permission != null && channel.permission.spy != null
                                 && p.hasPermission(channel.permission.spy)) {
-
                             spyReceivers.add(p);
                         }
                     }
@@ -495,8 +500,8 @@ public class ChatManager extends ConfigurableManager {
                 this.shortened = true;
             } else {
                 JsonObject obj = data.getAsJsonObject();
-                this.send = JsonUtils.getString(obj, "send");
-                this.receive = JsonUtils.getString(obj, "receive");
+                this.send = obj.has("send") ? JsonUtils.getString(obj, "send") : null;
+                this.receive = obj.has("receive") ? JsonUtils.getString(obj, "receive") : null;
                 this.spy = obj.has("spy") ? JsonUtils.getString(obj, "spy") : null;
                 this.shortened = false;
             }
@@ -507,8 +512,15 @@ public class ChatManager extends ConfigurableManager {
                 return new JsonPrimitive(this.send);
             } else {
                 JsonObject obj = new JsonObject();
-                obj.addProperty("send", this.send);
-                obj.addProperty("receive", this.receive);
+                if (send != null) {
+                    obj.addProperty("send", this.send);
+                }
+                if (receive != null) {
+                    obj.addProperty("receive", this.receive);
+                }
+                if (spy != null) {
+                    obj.addProperty("spy", this.spy);
+                }
                 return obj;
             }
         }
