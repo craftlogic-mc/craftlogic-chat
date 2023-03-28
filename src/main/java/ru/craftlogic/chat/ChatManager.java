@@ -18,6 +18,7 @@ import org.apache.commons.lang3.Validate;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import ru.craftlogic.api.economy.EconomyManager;
+import ru.craftlogic.api.event.player.PlayerTabNameEvent;
 import ru.craftlogic.api.event.player.PlayerTeleportRequestEvent;
 import ru.craftlogic.api.permission.PermissionManager;
 import ru.craftlogic.api.server.Server;
@@ -203,6 +204,14 @@ public class ChatManager extends ConfigurableManager {
             }
         }
         return null;
+    }
+
+    @SubscribeEvent
+    public void getPlayerTabName(PlayerTabNameEvent event) {
+        GameProfile profile = event.getEntityPlayer().getGameProfile();
+        PermissionManager permissionManager = this.server.getPermissionManager();
+        String color = permissionManager.getPermissionMetadata(profile, "color");
+        event.setName(Text.string(profile.getName()).color(findColor(color)).build());
     }
 
     @SubscribeEvent
