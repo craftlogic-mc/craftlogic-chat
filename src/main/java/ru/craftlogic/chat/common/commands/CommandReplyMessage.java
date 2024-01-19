@@ -9,6 +9,7 @@ import ru.craftlogic.api.text.Text;
 import ru.craftlogic.api.text.TextTranslation;
 import ru.craftlogic.api.world.Player;
 import ru.craftlogic.chat.ChatManager;
+import ru.craftlogic.chat.MuteManager;
 
 import java.util.UUID;
 
@@ -27,10 +28,17 @@ public class CommandReplyMessage extends CommandBase {
         if (sender == null) {
             throw new CommandException("chat.reply_message");
         }
+
         Player target = manager.getOnline(sender);
         if (target == null || target.getGameMode() == GameType.SPECTATOR) {
             throw new CommandException("chat.reply_message.offline");
         }
+
+        MuteManager.Mute mute = chatManager.getMute(ctx.senderAsPlayer().getId());
+        if (mute != null) {
+            throw new CommandException("chat.muted");
+        }
+
         String message = ctx.get("message").asString();
         TextTranslation y = Text.translation("tooltip.you");
         Text<?, ?> s = formatMessage(y, Text.string(target.getName()), message).suggestCommand("/w " + target.getName() + " ");
@@ -38,6 +46,7 @@ public class CommandReplyMessage extends CommandBase {
         target.sendMessage(r);
         player.sendMessage(s);
         chatManager.setLastSender(target.getId(), player.getId());
+        chatManager.setLastSender(player.getId(), target.getId());
     }
 
     private Text<?, ?> formatMessage(Text<?, ?> sender, Text<?, ?> receiver, String message) {

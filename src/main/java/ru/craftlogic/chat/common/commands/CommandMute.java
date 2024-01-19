@@ -34,11 +34,10 @@ public class CommandMute extends CommandBase {
         Text<?, ?> d = CraftMessages.parseDuration(duration).darkRed();
 
         if (reason != null) {
-            ctx.sendNotification(
-                Text.translation("commands.mute.target.reason").gray()
-                    .arg(target.getName(), Text::darkGray)
-                    .arg(d.darkGray())
-                    .arg(reason, Text::darkGray)
+            ctx.server().broadcast(Text.translation("commands.mute.target.reason").gray()
+                .arg(target.getName(), Text::darkGray)
+                .arg(d.darkGray())
+                .arg(reason, Text::darkGray)
             );
             target.sendMessage(
                 Text.translation("commands.mute.you.reason").red()
