@@ -11,7 +11,7 @@ import ru.craftlogic.api.CraftAPI;
 import ru.craftlogic.api.network.AdvancedNetwork;
 import ru.craftlogic.chat.common.ProxyCommon;
 
-@Mod(modid = CraftChat.MOD_ID, version = CraftChat.VERSION, dependencies = "required-after:" + CraftAPI.MOD_ID)
+@Mod(modid = CraftChat.MOD_ID, version = CraftChat.VERSION, dependencies = "required-after:" + CraftAPI.MOD_ID, acceptableRemoteVersions = "*")
 public class CraftChat {
     public static final String MOD_ID = CraftAPI.MOD_ID + "-chat";
     public static final String VERSION = "0.2.0-BETA";
