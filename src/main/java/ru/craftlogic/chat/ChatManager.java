@@ -38,8 +38,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
-import static java.util.Collections.singleton;
-
 public class ChatManager extends ConfigurableManager {
     private static final Logger LOGGER = LogManager.getLogger("ChatManager");
 
@@ -221,7 +219,9 @@ public class ChatManager extends ConfigurableManager {
         GameProfile profile = event.getEntityPlayer().getGameProfile();
         PermissionManager permissionManager = this.server.getPermissionManager();
         String color = permissionManager.getPermissionMetadata(profile, "color");
-        event.setName(Text.string(profile.getName()).color(findColor(color)).build());
+        if (color != null) {
+            event.setName(Text.string(profile.getName()).color(findColor(color)).build());
+        }
     }
 
     @SubscribeEvent
